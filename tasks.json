@@ -1,0 +1,156 @@
+[
+    {
+        "subdir": "retail-cleaning",
+        "clean_file": "retail-clean.png",
+        "dirty_file": "retail-dirty-v2.png",
+        "clean_prompt": "Modern, bright, spotless retail store interior with gleaming floors and organized shelves, photorealistic, 4k, wide angle.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Make the floor look scuffed, add dust bunnies in corners, and smudges on the floor, messy, photorealistic."
+    },
+    {
+        "subdir": "subsections/retail-cleaning",
+        "clean_file": "department-stores-clean.png",
+        "dirty_file": "department-stores-dirty-v2.png",
+        "clean_prompt": "Wide aisle of a luxury department store, pristine polished floors, organized merchandise displays, bright lighting, photorealistic, 8k.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. Mannequins on display MUST remain. Department store aisle. The floor has lost its shine and looks slightly dull. Small amount of dirtiness, a few faint scuff marks here and there. No trash, no debris, just small details pointing to a cleaning that is needed. Subtle wear."
+    },
+    {
+        "subdir": "subsections/retail-cleaning",
+        "clean_file": "grocery-stores-clean.png",
+        "dirty_file": "grocery-stores-dirty-v2.png",
+        "clean_prompt": "A perfectly clean grocery store aisle, shining linoleum floor, fully stocked shelves, bright fluorescent lighting, photorealistic, 4k.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Grocery store aisle. The floor is the same material as before but dirty. NO VISIBLE GROUT LINES. The floor must look seamless, like the clean version. Yellowed wax, dull finish, scuffed. NOT CONCRETE. Subtle wear."
+    },
+    {
+        "subdir": "subsections/retail-cleaning",
+        "clean_file": "ceramic-floor-clean.png",
+        "dirty_file": "ceramic-floor-dirty-v2.png",
+        "clean_prompt": "Close up wide shot of a large commercial space with newly installed ceramic tile flooring, perfectly clean grout lines, gleaming surface, photorealistic, 8k.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Make the grout look dark and discolored, add scuff marks to tiles, general wear and tear."
+    },
+    {
+        "subdir": "subsections/retail-cleaning",
+        "clean_file": "floor-maintenance-clean.png",
+        "dirty_file": "floor-maintenance-dirty-v2.png",
+        "clean_prompt": "Commercial VCT flooring with a high-gloss wet look finish, freshly waxed, reflecting the overhead lights clearly, empty hallway.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Make the floor look yellowed, scratched, dull finish with scuff marks."
+    },
+    {
+        "subdir": "subsections/retail-cleaning",
+        "clean_file": "high-dusting-clean.png",
+        "dirty_file": "high-dusting-dirty-v2.png",
+        "clean_prompt": "Low angle shot looking up at open ceiling warehouse pipes and ductwork, perfectly clean, no dust, bright industrial lighting.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Add thick layers of grey dust hanging from pipes and vents, add cobwebs."
+    },
+    {
+        "subdir": "subsections/healthcare-cleaning",
+        "clean_file": "store-retail-clean.png",
+        "dirty_file": "store-retail-dirty-v2.png",
+        "clean_prompt": "Boutique shop interior, hardwood floors shining, glass display cases crystal clean, inviting atmosphere.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Make the floor dusty, add fingerprints on glass cases, dull the lighting."
+    },
+    {
+        "subdir": "subsections/healthcare-cleaning",
+        "clean_file": "warehouse-clean.png",
+        "dirty_file": "warehouse-dirty-v3.png",
+        "clean_prompt": "Expansive industrial warehouse, concrete floor is polished and clean, pallet racks organized, safety lines painted clearly.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Concrete floor looks dull with tire marks from forklifts, some dust, but not abandoned. Working warehouse condition, slightly messy."
+    },
+    {
+        "subdir": "subsections/healthcare-cleaning",
+        "clean_file": "health-facility-clean.png",
+        "dirty_file": "health-facility-dirty-v6.png",
+        "clean_prompt": "Hospital corridor, sterile, ultra-clean white floors reflecting light, medical equipment neatly placed, blue and white color scheme.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Significantly change the position of the wheeled carts and medical equipment to show they have been moved around. Make the ceramic floor look yellowed and aged with wax buildup, but KEEP THE CEILING AND WALLS WHITE/BLUISH (do not yellow the whole image). Add scuff marks and blemishes only to the floor."
+    },
+    {
+        "subdir": "subsections/office-cleaning",
+        "clean_file": "bank-clean.png",
+        "dirty_file": "bank-dirty-v2.png",
+        "clean_prompt": "Bank lobby, marble floors shining, customer counters organized, professional and pristine atmosphere.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Make the marble floor look dull with scuff marks and general wear, less shine, photorealistic."
+    },
+    {
+        "subdir": "subsections/office-cleaning",
+        "clean_file": "office-clean.png",
+        "dirty_file": "office-dirty-v2.png",
+        "clean_prompt": "Open plan office space, modern desks, vacuumed carpet with fresh lines, glass partitions clear.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Office with moderate mess, dust on desks, a few used coffee cups left behind, full trash bin under desk but not overflowing, carpet needs vacuuming, realistic daily office clutter, photorealistic."
+    },
+    {
+        "subdir": "subsections/office-cleaning",
+        "clean_file": "school-clean.png",
+        "dirty_file": "school-dirty-v3.png",
+        "clean_prompt": "School hallway with lockers, terrazzo floor polished to a shine, bright and welcoming.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Terrazzo floor looks dull and scuffed from shoes, faint mud tracks near entrance, daily wear and tear. Needs buffing."
+    },
+    {
+        "subdir": "subsections/office-cleaning",
+        "clean_file": "government-clean.png",
+        "dirty_file": "government-dirty-v2.png",
+        "clean_prompt": "Interior highway of a generic modern Canadian government building, neutral colors, maple leaf flag in background, terrazzo flooring, wide hallway, official and clean, photorealistic.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Make the floor look worn and dusty, remove the shine, scuff marks from foot traffic."
+    },
+    {
+        "subdir": "subsections/commercial-cleaning",
+        "clean_file": "condo-clean.png",
+        "dirty_file": "condo-dirty-v2.png",
+        "clean_prompt": "Condo building lobby, modern design, clean rugs, clear glass doors, reception area tidy, bright natural light, photorealistic, 8k.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Condo building lobby with general wear, dull floor, some tracked-in dust on the floor near entrance. Glass doors are clear but floor lacks shine. Realistic daily foot traffic."
+    },
+    {
+        "subdir": "subsections/commercial-cleaning",
+        "clean_file": "hotel-clean.png",
+        "dirty_file": "hotel-dirty-v2.png",
+        "clean_prompt": "Luxury hotel reception lobby, polished marble floors, concierge desk, grand chandelier, elegant seating area, pristine and welcoming, 8k photorealistic.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Luxury hotel reception lobby with scuffed marble from luggage wheels, footprints, dull floor finish, lack of shine. NO tire marks, NO black rubber streaks. Just general high-traffic wear."
+    },
+    {
+        "subdir": "subsections/commercial-cleaning",
+        "clean_file": "restaurant-clean.png",
+        "dirty_file": "restaurant-dirty-v2.png",
+        "clean_prompt": "Restaurant dining room, tables set perfectly, wood floor polished, ambient lighting, clean and inviting.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Add food crumbs on floor, grease spots, make tables look messy."
+    },
+    {
+        "subdir": "",
+        "clean_file": "dealership-clean.jpeg",
+        "dirty_file": "dealership-dirty-v3.jpeg",
+        "clean_prompt": "Car dealership showroom, polished tiles, new cars, bright lighting.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Dealership showroom with normal daily foot traffic, some scuff marks on tiles, slightly dull floor. Realistic working environment, not abandoned."
+    },
+    {
+        "subdir": "",
+        "clean_file": "office-hallway-clean.jpeg",
+        "dirty_file": "office-hallway-dirty-v3.jpeg",
+        "clean_prompt": "Office hallway, clean carpet, bright lights, professional.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Carpet looks slightly worn, needs vacuuming, some lint on the floor. General foot traffic wear, not trashed."
+    },
+    {
+        "subdir": "",
+        "clean_file": "industrial-clean.png",
+        "dirty_file": "industrial-dirty-v3.png",
+        "clean_prompt": "Industrial facility, clean polished concrete floor, machinery.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Industrial floor with normal daily wear, some dust, slight dullness, scuff marks. Realistic working environment, not a disaster zone."
+    },
+    {
+        "subdir": "",
+        "clean_file": "post-construction-clean-v3.png",
+        "dirty_file": "post-construction-dirty-v3.png",
+        "clean_prompt": "Large open concept commercial office space, post-construction but fully cleaned. Polished concrete floors, exposed ceiling ductwork painted white, large glass windows, pillars, bright and airy. 8k photorealistic.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Large commercial space during construction phase. Drywall dust covering the concrete floor, scraps of wood and metal studs lying around, ladders in the background, windows covered in dust. Realistic construction site mess."
+    },
+    {
+        "subdir": "",
+        "clean_file": "commercial-floor-after.jpeg",
+        "dirty_file": "commercial-floor-dirty-v2.jpeg",
+        "clean_prompt": "Commercial floor, shiny stripes, newly waxed.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Same commercial floor but dull, dirty, scuffed, before waxing. Photorealistic."
+    },
+    {
+        "subdir": "subsections/healthcare-cleaning",
+        "clean_file": "medical-clinic-clean.png",
+        "dirty_file": "medical-clinic-dirty-v3.png",
+        "clean_prompt": "Medical exam room in a clinic, examination table with fresh paper roll, doctor's stool, cabinets, sink, sterile linoleum floor, bright neutral lighting, professional healthcare setting, photorealistic.",
+        "dirty_prompt": "ABSOLUTELY NO PEOPLE. EMPTY ROOM. Medical exam room with full trash bin, used paper on the floor, scuff marks around the exam table, dust on counters. Realistic daily wear, not biohazard."
+    }
+]
