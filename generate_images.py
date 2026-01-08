@@ -16,13 +16,13 @@ load_dotenv()
 
 API_KEY = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
-if not API_KEY:
-    print("Error: GOOGLE_API_KEY or GEMINI_API_KEY environment variable not set.")
-    print("Please set it in your .env file or environment.")
-    exit(1)
-
 # Initialize Client
-client = genai.Client(api_key=API_KEY)
+client = None
+if API_KEY:
+    client = genai.Client(api_key=API_KEY)
+else:
+    # Don't exit on import, just warn
+    print("Warning: GOOGLE_API_KEY or GEMINI_API_KEY not found in environment. API calls will fail until configured.")
 
 MODEL_NAME = 'gemini-3-pro-image-preview' # Or appropriate model
 OUTPUT_BASE = os.environ.get("OUTPUT_DIR", "./output")

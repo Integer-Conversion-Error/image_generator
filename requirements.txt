@@ -1,3 +1,4 @@
-google-genai
-Pillow
+google-generativeai
 python-dotenv
+Pillow
+PySide6
