@@ -4,7 +4,7 @@ import threading
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QListWidget, QListWidgetItem, QTextEdit, QLabel, QPushButton, 
-    QSplitter, QInputDialog, QMessageBox, QScrollArea, QFrame, QDialog, QLineEdit, QDialogButtonBox, QFormLayout, QGroupBox
+    QSplitter, QInputDialog, QMessageBox, QScrollArea, QFrame, QDialog, QLineEdit, QDialogButtonBox, QFormLayout, QGroupBox, QFileDialog
 )
 from PySide6.QtCore import Qt, Signal, QObject, QSize
 from PySide6.QtGui import QPixmap, QImage, QIcon
@@ -20,11 +20,11 @@ class WorkerSignals(QObject):
     error = Signal(str)
 
 class GenerationWorker(threading.Thread):
-    def __init__(self, prompt, output_path, base_image=None, signals=None):
+    def __init__(self, prompt, output_path, base_images=None, signals=None):
         super().__init__()
         self.prompt = prompt
         self.output_path = output_path
-        self.base_image = base_image
+        self.base_images = base_images or []
         self.signals = signals
 
     def run(self):
@@ -34,7 +34,7 @@ class GenerationWorker(threading.Thread):
                 self.signals.error.emit("API Key not configured. Please set it in Settings.")
                 return
 
-            result = generate_images.generate_image_content(self.prompt, self.output_path, self.base_image)
+            result = generate_images.generate_image_content(self.prompt, self.output_path, self.base_images)
             if result:
                 self.signals.finished.emit(result, "Success")
             else:
@@ -99,6 +99,7 @@ class MainWindow(QMainWindow):
         
         self.current_convo_id = None
         self.worker = None
+        self.uploaded_base_images = []
 
         # Main Layout
         central_widget = QWidget()
@@ -166,6 +167,11 @@ class MainWindow(QMainWindow):
         self.use_base_checkbox.setCheckable(True)
         self.use_base_checkbox.setToolTip("Use the last generated image as a visual reference for the new one.")
         controls_layout.addWidget(self.use_base_checkbox)
+        
+        self.upload_base_btn = QPushButton("Upload Base Image")
+        self.upload_base_btn.setToolTip("Upload an image file to use as base for generation/editing.")
+        self.upload_base_btn.clicked.connect(self.upload_base_image)
+        controls_layout.addWidget(self.upload_base_btn)
         
         controls_layout.addStretch()
         
@@ -239,6 +245,21 @@ class MainWindow(QMainWindow):
         QApplication.processEvents()
         self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum())
 
+    def upload_base_image(self):
+        file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Base Images", "", "Image Files (*.png *.jpg *.jpeg *.bmp *.gif)")
+        if file_paths:
+            self.uploaded_base_images = []
+            for file_path in file_paths:
+                try:
+                    img = Image.open(file_path)
+                    self.uploaded_base_images.append(img)
+                except Exception as e:
+                    QMessageBox.warning(self, "Error", f"Failed to load {file_path}: {e}")
+            if self.uploaded_base_images:
+                QMessageBox.information(self, "Success", f"Loaded {len(self.uploaded_base_images)} base image(s)")
+            else:
+                QMessageBox.warning(self, "Warning", "No images were loaded successfully")
+
     def generate_image(self):
         prompt = self.prompt_input.toPlainText().strip()
         if not prompt:
@@ -247,6 +268,7 @@ class MainWindow(QMainWindow):
         self.gen_btn.setEnabled(False)
         self.prompt_input.setDisabled(True)
         self.use_base_checkbox.setDisabled(True)
+        self.upload_base_btn.setDisabled(True)
         
         # Save User Message
         storage.save_message(self.current_convo_id, "user", prompt)
@@ -255,16 +277,16 @@ class MainWindow(QMainWindow):
         # Determine output path
         output_path = storage.get_image_save_path(self.current_convo_id)
         
-        # Determine base image (if checked)
-        base_image = None
-        if self.use_base_checkbox.isChecked():
+        # Determine base images
+        base_images = self.uploaded_base_images.copy()
+        if not base_images and self.use_base_checkbox.isChecked():
             # Find last image in history
             data = storage.load_history(self.current_convo_id)
             if data and "history" in data:
                 for msg in reversed(data["history"]):
                     if msg.get("image"):
                         try:
-                            base_image = Image.open(msg["image"])
+                            base_images = [Image.open(msg["image"])]
                             break
                         except:
                             pass
@@ -277,7 +299,7 @@ class MainWindow(QMainWindow):
         self.signals.finished.connect(self.on_generation_finished)
         self.signals.error.connect(self.on_generation_error)
         
-        self.worker = GenerationWorker(prompt, output_path, base_image, self.signals)
+        self.worker = GenerationWorker(prompt, output_path, base_images, self.signals)
         self.worker.start()
 
     def on_generation_finished(self, image_obj, message):
@@ -294,6 +316,8 @@ class MainWindow(QMainWindow):
 
         self.gen_btn.setEnabled(True)
         self.prompt_input.setDisabled(False)
+        self.use_base_checkbox.setDisabled(False)
+        self.upload_base_btn.setDisabled(False)
         self.refresh_conversation_list() # To update tooltip costs
 
     def on_generation_error(self, error_msg):
@@ -303,6 +327,8 @@ class MainWindow(QMainWindow):
         
         self.gen_btn.setEnabled(True)
         self.prompt_input.setDisabled(False)
+        self.use_base_checkbox.setDisabled(False)
+        self.upload_base_btn.setDisabled(False)
 
     def open_settings(self):
         dialog = SettingsDialog(self)
