@@ -4,7 +4,7 @@ import threading
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QListWidget, QListWidgetItem, QTextEdit, QLabel, QPushButton, 
-    QSplitter, QInputDialog, QMessageBox, QScrollArea, QFrame, QDialog, QLineEdit, QDialogButtonBox, QFormLayout
+    QSplitter, QInputDialog, QMessageBox, QScrollArea, QFrame, QDialog, QLineEdit, QDialogButtonBox, QFormLayout, QGroupBox
 )
 from PySide6.QtCore import Qt, Signal, QObject, QSize
 from PySide6.QtGui import QPixmap, QImage, QIcon
@@ -148,25 +148,36 @@ class MainWindow(QMainWindow):
         self.cost_label.setAlignment(Qt.AlignRight)
         right_layout.addWidget(self.cost_label)
 
-        # Input Area
-        input_container = QWidget()
-        input_layout = QHBoxLayout(input_container)
+        # Input Area (Reorganized)
+        input_container = QGroupBox("Input")
+        input_layout = QVBoxLayout(input_container)
         
+        # Text Input
         self.prompt_input = QTextEdit()
-        self.prompt_input.setPlaceholderText("Enter prompt here...")
-        self.prompt_input.setMaximumHeight(100)
+        self.prompt_input.setPlaceholderText("Enter image prompt here...")
+        self.prompt_input.setMinimumHeight(80)
+        self.prompt_input.setMaximumHeight(120)
         input_layout.addWidget(self.prompt_input)
         
-        btn_layout = QVBoxLayout()
-        self.gen_btn = QPushButton("Generate")
-        self.gen_btn.clicked.connect(self.generate_image)
-        btn_layout.addWidget(self.gen_btn)
+        # Controls Row
+        controls_layout = QHBoxLayout()
         
-        self.clean_checkbox = QPushButton("Use Last Image as Base") # Toggle behavior
-        self.clean_checkbox.setCheckable(True)
-        btn_layout.addWidget(self.clean_checkbox)
-
-        input_layout.addLayout(btn_layout)
+        self.use_base_checkbox = QPushButton("Use Last Image as Base") 
+        self.use_base_checkbox.setCheckable(True)
+        self.use_base_checkbox.setToolTip("Use the last generated image as a visual reference for the new one.")
+        controls_layout.addWidget(self.use_base_checkbox)
+        
+        controls_layout.addStretch()
+        
+        self.gen_btn = QPushButton("Generate Image")
+        self.gen_btn.setMinimumHeight(40)
+        self.gen_btn.setMinimumWidth(120)
+        self.gen_btn.setStyleSheet("font-weight: bold;")
+        self.gen_btn.clicked.connect(self.generate_image)
+        controls_layout.addWidget(self.gen_btn)
+        
+        input_layout.addLayout(controls_layout)
+        
         right_layout.addWidget(input_container)
         
         splitter.addWidget(right_panel)
@@ -235,6 +246,7 @@ class MainWindow(QMainWindow):
 
         self.gen_btn.setEnabled(False)
         self.prompt_input.setDisabled(True)
+        self.use_base_checkbox.setDisabled(True)
         
         # Save User Message
         storage.save_message(self.current_convo_id, "user", prompt)
@@ -245,7 +257,7 @@ class MainWindow(QMainWindow):
         
         # Determine base image (if checked)
         base_image = None
-        if self.clean_checkbox.isChecked():
+        if self.use_base_checkbox.isChecked():
             # Find last image in history
             data = storage.load_history(self.current_convo_id)
             if data and "history" in data:
@@ -257,8 +269,8 @@ class MainWindow(QMainWindow):
                         except:
                             pass
         
-        # Clear input
-        self.prompt_input.clear()
+        # Clear input -> Don't clear input immediately in case user wants to tweak
+        # self.prompt_input.clear() 
         
         # Worker Setup
         self.signals = WorkerSignals()
