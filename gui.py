@@ -1,10 +1,11 @@
 import sys
 import os
+import time
 import threading
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QListWidget, QListWidgetItem, QTextEdit, QLabel, QPushButton, 
-    QSplitter, QInputDialog, QMessageBox, QScrollArea, QFrame, QDialog, QLineEdit, QDialogButtonBox, QFormLayout, QGroupBox, QFileDialog
+    QSplitter, QInputDialog, QMessageBox, QScrollArea, QFrame, QDialog, QLineEdit, QDialogButtonBox, QFormLayout, QGroupBox, QFileDialog, QComboBox
 )
 from PySide6.QtCore import Qt, Signal, QObject, QSize
 from PySide6.QtGui import QPixmap, QImage, QIcon
@@ -20,11 +21,12 @@ class WorkerSignals(QObject):
     error = Signal(str)
 
 class GenerationWorker(threading.Thread):
-    def __init__(self, prompt, output_path, base_images=None, signals=None):
+    def __init__(self, prompt, output_path, base_images=None, video_mode=None, signals=None):
         super().__init__()
         self.prompt = prompt
         self.output_path = output_path
         self.base_images = base_images or []
+        self.video_mode = video_mode # None for image, or 'text_to_video', 'bring_to_life', 'reference'
         self.signals = signals
 
     def run(self):
@@ -34,11 +36,16 @@ class GenerationWorker(threading.Thread):
                 self.signals.error.emit("API Key not configured. Please set it in Settings.")
                 return
 
-            result = generate_images.generate_image_content(self.prompt, self.output_path, self.base_images)
+            result = None
+            if self.video_mode:
+                result = generate_images.generate_video_content(self.prompt, self.output_path, self.base_images, self.video_mode)
+            else:
+                result = generate_images.generate_image_content(self.prompt, self.output_path, self.base_images)
+
             if result:
                 self.signals.finished.emit(result, "Success")
             else:
-                self.signals.error.emit("Generation failed (no image returned).")
+                self.signals.error.emit("Generation failed (no output returned).")
         except Exception as e:
             self.signals.error.emit(str(e))
 
@@ -81,15 +88,21 @@ class ChatMessage(QFrame):
             text_label.setWordWrap(True)
             self.layout.addWidget(text_label)
         
-        # Image
+        # Image or Video
         if image_path and os.path.exists(image_path):
-            img_label = QLabel()
-            pixmap = QPixmap(image_path)
-            # Scale if too large
-            if pixmap.width() > 512:
-                pixmap = pixmap.scaledToWidth(512, Qt.SmoothTransformation)
-            img_label.setPixmap(pixmap)
-            self.layout.addWidget(img_label)
+            if image_path.endswith('.mp4'):
+                # Video placeholder
+                video_label = QLabel(f"🎥 Video Saved: {os.path.basename(image_path)}")
+                video_label.setStyleSheet("border: 2px solid #ccc; padding: 10px; background: #f0f0f0;")
+                self.layout.addWidget(video_label)
+            else:
+                img_label = QLabel()
+                pixmap = QPixmap(image_path)
+                # Scale if too large
+                if pixmap.width() > 512:
+                    pixmap = pixmap.scaledToWidth(512, Qt.SmoothTransformation)
+                img_label.setPixmap(pixmap)
+                self.layout.addWidget(img_label)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -153,6 +166,24 @@ class MainWindow(QMainWindow):
         input_container = QGroupBox("Input")
         input_layout = QVBoxLayout(input_container)
         
+        # Mode Selection
+        mode_layout = QHBoxLayout()
+        mode_layout.addWidget(QLabel("Type:"))
+        self.type_combo = QComboBox()
+        self.type_combo.addItems(["Image", "Video"])
+        self.type_combo.currentIndexChanged.connect(self.update_ui_state)
+        mode_layout.addWidget(self.type_combo)
+        
+        mode_layout.addWidget(QLabel("Video Mode:"))
+        self.video_mode_combo = QComboBox()
+        self.video_mode_combo.addItems(["Text-to-Video", "Bring to Life", "Reference"])
+        self.video_mode_combo.setEnabled(False) # Default to Image mode
+        self.video_mode_combo.currentIndexChanged.connect(self.update_ui_state)
+        mode_layout.addWidget(self.video_mode_combo)
+        
+        mode_layout.addStretch()
+        input_layout.addLayout(mode_layout)
+        
         # Text Input
         self.prompt_input = QTextEdit()
         self.prompt_input.setPlaceholderText("Enter image prompt here...")
@@ -172,6 +203,9 @@ class MainWindow(QMainWindow):
         self.upload_base_btn.setToolTip("Upload an image file to use as base for generation/editing.")
         self.upload_base_btn.clicked.connect(self.upload_base_image)
         controls_layout.addWidget(self.upload_base_btn)
+        
+        self.image_count_label = QLabel("0 images loaded")
+        controls_layout.addWidget(self.image_count_label)
         
         controls_layout.addStretch()
         
@@ -198,6 +232,23 @@ class MainWindow(QMainWindow):
             self.load_conversation(self.convo_list.item(0))
         else:
             self.start_new_conversation()
+
+    def update_ui_state(self):
+        is_video = self.type_combo.currentText() == "Video"
+        self.video_mode_combo.setEnabled(is_video)
+        
+        if is_video:
+            v_mode = self.video_mode_combo.currentText()
+            if v_mode == "Text-to-Video":
+                self.use_base_checkbox.setEnabled(False)
+                self.upload_base_btn.setEnabled(False)
+            else:
+                self.use_base_checkbox.setEnabled(True)
+                self.upload_base_btn.setEnabled(True)
+        else:
+            # Image Mode
+            self.use_base_checkbox.setEnabled(True)
+            self.upload_base_btn.setEnabled(True)
 
     def refresh_conversation_list(self):
         self.convo_list.clear()
@@ -246,6 +297,7 @@ class MainWindow(QMainWindow):
         self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum())
 
     def upload_base_image(self):
+        # Allow multiple selection
         file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Base Images", "", "Image Files (*.png *.jpg *.jpeg *.bmp *.gif)")
         if file_paths:
             self.uploaded_base_images = []
@@ -255,8 +307,12 @@ class MainWindow(QMainWindow):
                     self.uploaded_base_images.append(img)
                 except Exception as e:
                     QMessageBox.warning(self, "Error", f"Failed to load {file_path}: {e}")
-            if self.uploaded_base_images:
-                QMessageBox.information(self, "Success", f"Loaded {len(self.uploaded_base_images)} base image(s)")
+            
+            count = len(self.uploaded_base_images)
+            self.image_count_label.setText(f"{count} images loaded")
+            
+            if count > 0:
+                QMessageBox.information(self, "Success", f"Loaded {count} base image(s)")
             else:
                 QMessageBox.warning(self, "Warning", "No images were loaded successfully")
 
@@ -265,49 +321,87 @@ class MainWindow(QMainWindow):
         if not prompt:
             return
 
+        is_video = self.type_combo.currentText() == "Video"
+        video_mode_ui = self.video_mode_combo.currentText()
+        
+        video_mode_key = None
+        if is_video:
+            if video_mode_ui == "Text-to-Video": video_mode_key = 'text_to_video'
+            elif video_mode_ui == "Bring to Life": video_mode_key = 'bring_to_life'
+            elif video_mode_ui == "Reference": video_mode_key = 'reference'
+
         self.gen_btn.setEnabled(False)
         self.prompt_input.setDisabled(True)
-        self.use_base_checkbox.setDisabled(True)
-        self.upload_base_btn.setDisabled(True)
+        # UI state for buttons handled by update_ui_state generally, but disable during gen
         
         # Save User Message
         storage.save_message(self.current_convo_id, "user", prompt)
         self.add_message_to_ui("user", prompt)
         
         # Determine output path
-        output_path = storage.get_image_save_path(self.current_convo_id)
+        if is_video:
+             # Basic timestamp filename for video
+             output_path = os.path.join(storage.get_conversation_dir(self.current_convo_id), f"vid_{int(time.time())}.mp4")
+        else:
+             output_path = storage.get_image_save_path(self.current_convo_id)
         
         # Determine base images
         base_images = self.uploaded_base_images.copy()
-        if not base_images and self.use_base_checkbox.isChecked():
-            # Find last image in history
-            data = storage.load_history(self.current_convo_id)
-            if data and "history" in data:
-                for msg in reversed(data["history"]):
-                    if msg.get("image"):
-                        try:
-                            base_images = [Image.open(msg["image"])]
-                            break
-                        except:
-                            pass
         
-        # Clear input -> Don't clear input immediately in case user wants to tweak
-        # self.prompt_input.clear() 
+        # Logic for "Use Last Image"
+        # Only relevant if enabled
+        if not base_images and self.use_base_checkbox.isChecked() and self.use_base_checkbox.isEnabled():
+             data = storage.load_history(self.current_convo_id)
+             if data and "history" in data:
+                 for msg in reversed(data["history"]):
+                     if msg.get("image") and msg["image"].endswith(('.png', '.jpg', '.jpeg')):
+                         try:
+                             base_images = [Image.open(msg["image"])]
+                             break
+                         except:
+                             pass
         
         # Worker Setup
         self.signals = WorkerSignals()
         self.signals.finished.connect(self.on_generation_finished)
         self.signals.error.connect(self.on_generation_error)
         
-        self.worker = GenerationWorker(prompt, output_path, base_images, self.signals)
+        self.worker = GenerationWorker(prompt, output_path, base_images, video_mode_key, self.signals)
         self.worker.start()
 
-    def on_generation_finished(self, image_obj, message):
-        output_path = self.worker.output_path
+    def on_generation_finished(self, output_path, message):
+        # output_path comes from worker (image_obj or path)
+        # If it's a string path, assume it's saved.
+        # If it's an image object (legacy code returned result as PIL image sometimes? No, generate_image_content returned path in previous code? 
+        # Wait, previous generate_image_content returned image object OR None. 
+        # I changed generate_video_content to return path.
+        # I should check generate_images.generate_image_content behavior. 
+        # It returns saved_img (PIL Image).
+        # So I need to handle both.
         
-        # Save Assistant Message with Image
-        storage.save_message(self.current_convo_id, "assistant", "Image Generated", output_path, cost=COST_PER_IMAGE)
-        self.add_message_to_ui("assistant", "Image Generated", output_path)
+        is_video = isinstance(output_path, str) and output_path.endswith(".mp4")
+        
+        if is_video:
+            msg_text = "Video Generated"
+            cost = COST_PER_IMAGE * 10
+            # output_path is the path
+        else:
+             # Logic for image object
+             # The old code was: 
+             # self.worker.output_path was used. 
+             # generate_image_content returned result (PIL Image) if success.
+             # But on_generation_finished(self, image_obj, message).
+             # It ignored image_obj and used self.worker.output_path for saving message.
+             # So I can just use self.worker.output_path.
+             
+             msg_text = "Image Generated"
+             cost = COST_PER_IMAGE
+        
+        saved_path = self.worker.output_path
+        
+        # Save Assistant Message with Image/Video
+        storage.save_message(self.current_convo_id, "assistant", msg_text, saved_path, cost=cost)
+        self.add_message_to_ui("assistant", msg_text, saved_path)
         
         # Update cost
         data = storage.load_history(self.current_convo_id)

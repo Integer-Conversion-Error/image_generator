@@ -1,4 +1,6 @@
 import os
+import time
+
 import io
 import json
 import argparse
@@ -138,3 +140,84 @@ if __name__ == "__main__":
             continue
         print(f"Processing task: {task_name}")
         generate_task_images(task, args.dirty_only)
+
+def generate_video_content(prompt, output_path, base_images=None, video_mode='text_to_video'):
+    print(f"Generating video: {output_path}...")
+    
+    if not client:
+         print("Error: Client not initialized.")
+         return None
+
+    try:
+        operation = None
+        
+        if video_mode == 'bring_to_life':
+            if not base_images:
+                print("Error: 'bring_to_life' mode requires a base image.")
+                return None
+            
+            # Use the first image as the start frame
+            # Ensure it is a PIL Image which the SDK accepts
+            base_image = base_images[0]
+            
+            operation = client.models.generate_videos(
+                model="veo-3.1-generate-preview",
+                prompt=prompt,
+                image=base_image,
+            )
+            
+        elif video_mode == 'reference':
+            if not base_images:
+                print("Error: 'reference' mode requires at least one base image.")
+                return None
+            
+            # Limit to 3 images
+            refs = base_images[:3]
+            reference_images = []
+            
+            for img in refs:
+                # The SDK expects images in the reference_images list.
+                # It likely handles PIL images or we might need to upload/convert them.
+                # Based on user example: types.VideoGenerationReferenceImage(image=img, reference_type="asset")
+                # We assume 'img' here is a PIL Image.
+                reference_images.append(
+                    types.VideoGenerationReferenceImage(
+                        image=img,
+                        reference_type="asset"
+                    )
+                )
+            
+            operation = client.models.generate_videos(
+                model="veo-3.1-generate-preview",
+                prompt=prompt,
+                config=types.GenerateVideosConfig(
+                    reference_images=reference_images,
+                ),
+            )
+            
+        else: # text_to_video
+            operation = client.models.generate_videos(
+                model="veo-3.1-generate-preview",
+                prompt=prompt,
+            )
+
+        # Poll the operation status
+        while not operation.done:
+            print("Waiting for video generation to complete...")
+            time.sleep(5) # Poll every 5 seconds
+            operation = client.operations.get(operation)
+
+        # Download the generated video
+        if operation.response.generated_videos:
+            generated_video = operation.response.generated_videos[0]
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            generated_video.video.save(output_path)
+            print(f"Generated video saved to {output_path}")
+            return output_path
+        else:
+            print("No video returned in response.")
+            return None
+
+    except Exception as e:
+        print(f"Failed to generate video {output_path}: {e}")
+        return None
