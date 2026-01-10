@@ -26,6 +26,14 @@ else:
 
 MODEL_NAME = 'gemini-3-pro-image-preview' # Or appropriate model
 
+def pil_to_genai_image(pil_image, mime_type="image/png"):
+    # Convert PIL Image to types.Image
+    img_byte_arr = io.BytesIO()
+    # Force PNG for consistency
+    pil_image.save(img_byte_arr, format='PNG')
+    img_bytes = img_byte_arr.getvalue()
+    return types.Image(image_bytes=img_bytes, mime_type=mime_type)
+
 def save_image_from_part(part, output_path):
     if part.inline_data and part.inline_data.data:
         try:
@@ -159,11 +167,12 @@ def generate_video_content(prompt, output_path, base_images=None, video_mode='te
             # Use the first image as the start frame
             # Ensure it is a PIL Image which the SDK accepts
             base_image = base_images[0]
+            genai_image = pil_to_genai_image(base_image)
             
             operation = client.models.generate_videos(
                 model="veo-3.1-generate-preview",
                 prompt=prompt,
-                image=base_image,
+                image=genai_image,
             )
             
         elif video_mode == 'reference':
@@ -176,13 +185,9 @@ def generate_video_content(prompt, output_path, base_images=None, video_mode='te
             reference_images = []
             
             for img in refs:
-                # The SDK expects images in the reference_images list.
-                # It likely handles PIL images or we might need to upload/convert them.
-                # Based on user example: types.VideoGenerationReferenceImage(image=img, reference_type="asset")
-                # We assume 'img' here is a PIL Image.
                 reference_images.append(
                     types.VideoGenerationReferenceImage(
-                        image=img,
+                        image=pil_to_genai_image(img),
                         reference_type="asset"
                     )
                 )
@@ -211,7 +216,22 @@ def generate_video_content(prompt, output_path, base_images=None, video_mode='te
         if operation.response.generated_videos:
             generated_video = operation.response.generated_videos[0]
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            generated_video.video.save(output_path)
+            
+            if generated_video.video.uri:
+                print(f"Downloading video from {generated_video.video.uri}...")
+                import urllib.request
+                
+                # Create a request with the API key header
+                req = urllib.request.Request(
+                    generated_video.video.uri, 
+                    headers={"x-goog-api-key": API_KEY}
+                )
+                
+                with urllib.request.urlopen(req) as response, open(output_path, 'wb') as out_file:
+                    out_file.write(response.read())
+            else:
+                generated_video.video.save(output_path)
+                
             print(f"Generated video saved to {output_path}")
             return output_path
         else:

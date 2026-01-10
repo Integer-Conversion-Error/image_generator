@@ -5,10 +5,12 @@ import threading
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QListWidget, QListWidgetItem, QTextEdit, QLabel, QPushButton, 
-    QSplitter, QInputDialog, QMessageBox, QScrollArea, QFrame, QDialog, QLineEdit, QDialogButtonBox, QFormLayout, QGroupBox, QFileDialog, QComboBox
+    QSplitter, QInputDialog, QMessageBox, QScrollArea, QFrame, QDialog, QLineEdit, QDialogButtonBox, QFormLayout, QGroupBox, QFileDialog, QComboBox, QAbstractItemView
 )
-from PySide6.QtCore import Qt, Signal, QObject, QSize
+from PySide6.QtCore import Qt, Signal, QObject, QSize, QUrl
 from PySide6.QtGui import QPixmap, QImage, QIcon
+from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
+from PySide6.QtMultimediaWidgets import QVideoWidget
 from PIL import Image
 import generate_images
 import storage
@@ -19,6 +21,41 @@ COST_PER_IMAGE = 0.04 # Approximate cost for Imagen 3 standard
 class WorkerSignals(QObject):
     finished = Signal(object, str) # result (PIL Image or None), message
     error = Signal(str)
+
+class VideoPlayer(QWidget):
+    def __init__(self, video_path, parent=None):
+        super().__init__(parent)
+        self.setMinimumSize(400, 340)
+        # self.setMaximumSize(512, 512)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0,0,0,0)
+        
+        self.video_widget = QVideoWidget()
+        layout.addWidget(self.video_widget)
+        
+        self.audio_output = QAudioOutput()
+        self.player = QMediaPlayer()
+        self.player.setAudioOutput(self.audio_output)
+        self.player.setVideoOutput(self.video_widget)
+        self.player.setSource(QUrl.fromLocalFile(os.path.abspath(video_path)))
+        self.audio_output.setVolume(1.0) 
+        
+        # Controls
+        controls_layout = QHBoxLayout()
+        self.play_btn = QPushButton("Play")
+        self.play_btn.clicked.connect(self.toggle_playback)
+        controls_layout.addWidget(self.play_btn)
+        
+        layout.addLayout(controls_layout)
+        
+    def toggle_playback(self):
+        if self.player.playbackState() == QMediaPlayer.PlayingState:
+            self.player.pause()
+            self.play_btn.setText("Play")
+        else:
+            self.player.play()
+            self.play_btn.setText("Pause")
 
 class GenerationWorker(threading.Thread):
     def __init__(self, prompt, output_path, base_images=None, video_mode=None, signals=None):
@@ -91,10 +128,12 @@ class ChatMessage(QFrame):
         # Image or Video
         if image_path and os.path.exists(image_path):
             if image_path.endswith('.mp4'):
-                # Video placeholder
-                video_label = QLabel(f"🎥 Video Saved: {os.path.basename(image_path)}")
-                video_label.setStyleSheet("border: 2px solid #ccc; padding: 10px; background: #f0f0f0;")
-                self.layout.addWidget(video_label)
+                # Video Player
+                try:
+                    player = VideoPlayer(image_path)
+                    self.layout.addWidget(player)
+                except Exception as e:
+                    self.layout.addWidget(QLabel(f"Error loading video: {e}"))
             else:
                 img_label = QLabel()
                 pixmap = QPixmap(image_path)
@@ -112,7 +151,7 @@ class MainWindow(QMainWindow):
         
         self.current_convo_id = None
         self.worker = None
-        self.uploaded_base_images = []
+        # self.uploaded_base_images removed in favor of UI list source of truth
 
         # Main Layout
         central_widget = QWidget()
@@ -204,8 +243,22 @@ class MainWindow(QMainWindow):
         self.upload_base_btn.clicked.connect(self.upload_base_image)
         controls_layout.addWidget(self.upload_base_btn)
         
-        self.image_count_label = QLabel("0 images loaded")
-        controls_layout.addWidget(self.image_count_label)
+        self.remove_base_btn = QPushButton("Remove Selected")
+        self.remove_base_btn.setToolTip("Remove selected images from the reference list.")
+        self.remove_base_btn.clicked.connect(self.remove_base_image)
+        controls_layout.addWidget(self.remove_base_btn)
+        
+        self.base_image_list = QListWidget()
+        self.base_image_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.base_image_list.setIconSize(QSize(64, 64))
+        self.base_image_list.setFixedHeight(100) # Give it some height
+        self.base_image_list.setViewMode(QListWidget.IconMode)
+        self.base_image_list.setResizeMode(QListWidget.Adjust)
+        self.base_image_list.setSpacing(5)
+        # We put the list *above* the controls row or *in* the controls row?
+        # The design plan said replace the label. 
+        # Putting a list widget inside a horizontal layout with buttons might be cramped.
+        # Let's add it to input_layout *before* the controls row, or make a new row.
         
         controls_layout.addStretch()
         
@@ -216,6 +269,7 @@ class MainWindow(QMainWindow):
         self.gen_btn.clicked.connect(self.generate_image)
         controls_layout.addWidget(self.gen_btn)
         
+        input_layout.addWidget(self.base_image_list) # Add list above buttons
         input_layout.addLayout(controls_layout)
         
         right_layout.addWidget(input_container)
@@ -300,21 +354,34 @@ class MainWindow(QMainWindow):
         # Allow multiple selection
         file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Base Images", "", "Image Files (*.png *.jpg *.jpeg *.bmp *.gif)")
         if file_paths:
-            self.uploaded_base_images = []
             for file_path in file_paths:
                 try:
+                    # Verify we can open it
                     img = Image.open(file_path)
-                    self.uploaded_base_images.append(img)
+                    # Create Item
+                    item = QListWidgetItem(os.path.basename(file_path))
+                    item.setData(Qt.UserRole, file_path)
+                    item.setToolTip(file_path)
+                    
+                    # Create Thumbnail
+                    pixmap = QPixmap(file_path)
+                    if not pixmap.isNull():
+                         pixmap = pixmap.scaled(64, 64, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                         item.setIcon(QIcon(pixmap))
+                    
+                    self.base_image_list.addItem(item)
                 except Exception as e:
                     QMessageBox.warning(self, "Error", f"Failed to load {file_path}: {e}")
-            
-            count = len(self.uploaded_base_images)
-            self.image_count_label.setText(f"{count} images loaded")
-            
-            if count > 0:
-                QMessageBox.information(self, "Success", f"Loaded {count} base image(s)")
-            else:
-                QMessageBox.warning(self, "Warning", "No images were loaded successfully")
+
+    def remove_base_image(self):
+        selected_items = self.base_image_list.selectedItems()
+        if not selected_items:
+            return
+        
+        for item in selected_items:
+            # remove from list
+            row = self.base_image_list.row(item)
+            self.base_image_list.takeItem(row)
 
     def generate_image(self):
         prompt = self.prompt_input.toPlainText().strip()
@@ -332,6 +399,10 @@ class MainWindow(QMainWindow):
 
         self.gen_btn.setEnabled(False)
         self.prompt_input.setDisabled(True)
+        self.use_base_checkbox.setDisabled(True)
+        self.upload_base_btn.setDisabled(True)
+        self.remove_base_btn.setDisabled(True)
+        self.base_image_list.setDisabled(True)
         # UI state for buttons handled by update_ui_state generally, but disable during gen
         
         # Save User Message
@@ -345,18 +416,30 @@ class MainWindow(QMainWindow):
         else:
              output_path = storage.get_image_save_path(self.current_convo_id)
         
-        # Determine base images
-        base_images = self.uploaded_base_images.copy()
+        # Determine base images from ListWidget
+        base_images = []
         
-        # Logic for "Use Last Image"
-        # Only relevant if enabled
-        if not base_images and self.use_base_checkbox.isChecked() and self.use_base_checkbox.isEnabled():
+        # 1. From List Widget
+        for i in range(self.base_image_list.count()):
+            item = self.base_image_list.item(i)
+            file_path = item.data(Qt.UserRole)
+            try:
+                img = Image.open(file_path)
+                base_images.append(img)
+            except Exception as e:
+                print(f"Failed to load base image {file_path}: {e}")
+
+        # 2. Logic for "Use Last Image" (Append to list if checked)
+        if self.use_base_checkbox.isChecked() and self.use_base_checkbox.isEnabled():
              data = storage.load_history(self.current_convo_id)
              if data and "history" in data:
                  for msg in reversed(data["history"]):
                      if msg.get("image") and msg["image"].endswith(('.png', '.jpg', '.jpeg')):
                          try:
-                             base_images = [Image.open(msg["image"])]
+                             base_images.append(Image.open(msg["image"]))
+                             # Note: This doesn't add it to the visual list, just for this generation.
+                             # If we wanted to be explicit, we could add it to the list, but "use last" feels ephemeral.
+                             # Keeping it ephemeral for now as per previous logic.
                              break
                          except:
                              pass
@@ -412,6 +495,8 @@ class MainWindow(QMainWindow):
         self.prompt_input.setDisabled(False)
         self.use_base_checkbox.setDisabled(False)
         self.upload_base_btn.setDisabled(False)
+        self.remove_base_btn.setDisabled(False)
+        self.base_image_list.setDisabled(False)
         self.refresh_conversation_list() # To update tooltip costs
 
     def on_generation_error(self, error_msg):
@@ -423,6 +508,8 @@ class MainWindow(QMainWindow):
         self.prompt_input.setDisabled(False)
         self.use_base_checkbox.setDisabled(False)
         self.upload_base_btn.setDisabled(False)
+        self.remove_base_btn.setDisabled(False)
+        self.base_image_list.setDisabled(False)
 
     def open_settings(self):
         dialog = SettingsDialog(self)

@@ -88,3 +88,6 @@ def get_image_save_path(convo_id, extension=".png"):
     timestamp = int(time.time() * 1000)
     filename = f"{timestamp}{extension}"
     return os.path.join(CONVERSATIONS_DIR, convo_id, "images", filename)
+
+def get_conversation_dir(convo_id):
+    return os.path.join(CONVERSATIONS_DIR, convo_id)
